@@ -2,6 +2,9 @@ import obd
 import requests
 import json
 
+from datetime import datetime
+from datetime import timezone
+
 command_table = [
     obd.commands.PIDS_A,
     obd.commands.STATUS,
@@ -99,6 +102,16 @@ command_table = [
     obd.commands.FUEL_RATE,
 ]
 
+def getMAC():
+    try:
+        try:
+            mac = open("/sys/class/net/ppp0/address").read()
+        except:
+            mac = open("/sys/class/net/eth0/address").read()
+    except:
+        mac = "00:00:00:00:00:00"
+    return mac[0:17]
+
 data = {}
 connection = obd.OBD()
 
@@ -107,14 +120,12 @@ for cmd in command_table:
     data[cmd.name.lower()] = response.value
 
 # id 7 for gps and 8 for obd
-
-raw_data = json.dumps(data)
 json = {
-    "controller_mac": "CF-64-93-81-CA-EC",
+    "controller_mac": getMAC(),
     "sensor_id": 8,
-    "value": raw_data,
+    "value": json.dumps(data),
     "hash": "some hash here",
-    "timestamp": "2019-02-15T03:08:10",
+    "timestamp": datetime.now().replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 }
 
 response = requests.post("https://receiver.meter4.me/sensor.addRecord", json=json)
