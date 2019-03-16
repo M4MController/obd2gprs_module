@@ -1,6 +1,7 @@
 import obd
 import requests
 import json
+import time
 
 from datetime import datetime
 from datetime import timezone
@@ -114,20 +115,23 @@ def getMAC():
 
 data = {}
 connection = obd.OBD()
+mac = getMAC()
 
-for cmd in command_table:
-    response = connection.query(cmd)
-    data[cmd.name.lower()] = response.value
+while True:
+    for cmd in command_table:
+        response = connection.query(cmd)
+        data[cmd.name.lower()] = response.value
 
-# id 7 for gps and 8 for obd
-json = {
-    "controller_mac": getMAC(),
-    "sensor_id": 8,
-    "value": json.dumps(data),
-    "hash": "some hash here",
-    "timestamp": datetime.now().replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-}
+    # id 7 for gps and 8 for obd
+    json_data = {
+        "controller_mac": mac,
+        "sensor_id": 8,
+        "value": json.dumps(data),
+        "hash": "some hash here",
+        "timestamp": datetime.now().replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    }
 
-response = requests.post("https://receiver.meter4.me/sensor.addRecord", json=json)
-print(response.status_code, response.json())
+    response = requests.post("https://receiver.meter4.me/sensor.addRecord", json=json_data)
+    print(response.status_code, response.json())
+    time.sleep(10)
 
