@@ -2,6 +2,7 @@ import obd
 import requests
 import json
 import time
+import serial
 
 from datetime import datetime
 from datetime import timezone
@@ -103,6 +104,21 @@ command_table = [
     obd.commands.FUEL_RATE,
 ]
 
+def get_location(data):
+    idx = data.find(b'V')
+
+    if idx == -1:
+        idx = data.find(b'A')
+        lat_deg = int(data[idx+2:idx+4])
+        lat_remainder = data[idx+4:idx+13]
+        lon_deg = int(data[idx+16:idx+19])
+        lon_remainder = data[idx+19:idx+28]
+        lat = lat_deg + float(lat_remainder) / 60
+        lon = lon_deg + float(lon_remainder) / 60
+        return lat, lon
+    else:
+        return 0, 0
+
 def getMAC():
     try:
         try:
@@ -113,17 +129,52 @@ def getMAC():
         mac = "00:00:00:00:00:00"
     return mac[0:17]
 
+port = serial.Serial("/dev/ttyUSB0", baudrate=115200, timeout=1)
+
+port.write('AT+CGNSPWR=1\r\n'.encode('utf-8'))
+rcv = port.read(100)
+print(rcv)
+
+port.write('AT+CGNSIPR=115200\r\n'.encode('utf-8'))
+rcv = port.read(100)
+print(rcv)
+
+port.write('AT+CGNSTST=1\r\n'.encode('utf-8'))
+rcv = port.read(100)
+print(rcv)
+
+port.write('AT+CGNSINF\r\n'.encode('utf-8'))
+rcv = port.read(200)
+print(rcv)
+
 data = {}
 connection = obd.OBD()
 mac = getMAC()
+lat, lon = 0, 0
 
 while True:
     for cmd in command_table:
         response = connection.query(cmd)
         data[cmd.name.lower()] = response.value
 
-    # id 7 for gps and 8 for obd
-    json_data = {
+    fd = port.read(200)
+
+    if b'$GNRMC' in fd:
+        idx = fd.find(b'$GNRMC')
+        dif = len(fd) - idx
+        b_data, fd1 = b'', b''
+
+        if dif < 46:
+            fd1 = port.read(200)
+            b_data = fd[idx:] + fd1[:46-dif]
+        else:
+            b_data = fd[idx:idx+46]
+
+        lat, lon = get_location(b_data)
+    else:
+        continue
+
+    json_data8 = {
         "controller_mac": mac,
         "sensor_id": 8,
         "value": json.dumps(data),
@@ -131,7 +182,18 @@ while True:
         "timestamp": datetime.now().replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     }
 
-    response = requests.post("https://receiver.meter4.me/sensor.addRecord", json=json_data)
+    json_data7 = {
+        "controller_mac": mac,
+        "sensor_id": 7,
+        "value": json.dumps({'lat': lat, 'lon': lon}),
+        "hash": "some hash here",
+        "timestamp": datetime.now().replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    }
+
+    response = requests.post("https://receiver.meter4.me/sensor.addRecord", json=json_data8)
     print(response.status_code, response.json())
+    response = requests.post("https://receiver.meter4.me/sensor.addRecord", json=json_data7)
+    print(response.status_code, response.json())
+
     time.sleep(10)
 
