@@ -129,7 +129,7 @@ def getMAC():
         mac = "00:00:00:00:00:00"
     return mac[0:17]
 
-port = serial.Serial("/dev/ttyUSB0", baudrate=115200, timeout=1)
+port = serial.Serial("/dev/ttyS0", baudrate=115200, timeout=1)
 
 port.write('AT+CGNSPWR=1\r\n'.encode('utf-8'))
 rcv = port.read(100)
@@ -156,23 +156,23 @@ while True:
     for cmd in command_table:
         response = connection.query(cmd)
         data[cmd.name.lower()] = response.value
+    
+    while True:
+        fd = port.read(200)
 
-    fd = port.read(200)
+        if b'$GNRMC' in fd:
+            idx = fd.find(b'$GNRMC')
+            dif = len(fd) - idx
+            b_data, fd1 = b'', b''
 
-    if b'$GNRMC' in fd:
-        idx = fd.find(b'$GNRMC')
-        dif = len(fd) - idx
-        b_data, fd1 = b'', b''
-
-        if dif < 46:
-            fd1 = port.read(200)
-            b_data = fd[idx:] + fd1[:46-dif]
-        else:
-            b_data = fd[idx:idx+46]
-
-        lat, lon = get_location(b_data)
-    else:
-        continue
+            if dif < 46:
+                fd1 = port.read(200)
+                b_data = fd[idx:] + fd1[:46-dif]
+            else:
+                b_data = fd[idx:idx+46]
+            
+            lat, lon = get_location(b_data)
+            break
 
     json_data8 = {
         "controller_mac": mac,
