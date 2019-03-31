@@ -1,0 +1,8 @@
+certifi==2019.3.9
+chardet==3.0.4
+idna==2.8
+obd==0.7.0
+Pint==0.7.2
+pyserial==3.4
+requests==2.21.0
+urllib3==1.24.1
