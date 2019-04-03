@@ -101,10 +101,31 @@ command_table = [
 connection = obd.OBD(portstr="/dev/ttyUSB0")
 data = {}
 
+import datetime, os
+
 while True:
     for cmd in command_table:
         response = connection.query(cmd)
-        data[cmd.name.lower()] = response.value
+        data[cmd.name.lower()] = str(response.value)
 
-    print(json.dumps(data))
+    if data:
+       timestamp = str(datetime.datetime.now())
+       data_json = json.dumps({"timestamp": timestamp, "value": data})
+       # еее гавнокод
+       with open("obd.log", "a") as log:
+          log.write(data_json)
+          log.write("\n")
+       if not os.path.exists("obd.csv"):
+          with open("obd.csv", "w") as csv:
+              csv.write("timestamp;")
+              for key in data:
+                  csv.write(key)
+                  csv.write(";")
+              csv.write("\n")
+       with open("obd.csv", "a") as csv:
+          csv.write("{};".format(timestamp))
+          for key in data:
+              csv.write(str(data[key]))
+              csv.write(";")
+          csv.write("\n")
 
