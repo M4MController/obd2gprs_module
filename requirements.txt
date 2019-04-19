@@ -1,4 +1,4 @@
-certifi==2019.3.9
+﻿certifi==2019.3.9
 chardet==3.0.4
 idna==2.8
 obd==0.7.0
@@ -6,3 +6,7 @@ Pint==0.7.2
 pyserial==3.4
 requests==2.21.0
 urllib3==1.24.1
+
+setting in video: https://photos.google.com/share/AF1QipMvUTmiprSEzEXH6b4rjDF4SgE7bQmL5pUXDjntNPcFhRd5o7SfM2S0c1_h14OEew/photo/AF1QipOi-DkaTy10SGecAgBsufflONl1kMU918X2rWFp?key=VEZ2cTQwTGd0bG44bFRUNzU3ajhreUJPTDZLNzVn
+
+https://tutorials-raspberrypi.com/measuring-rotation-and-acceleration-raspberry-pi/

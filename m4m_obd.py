@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 import obd
-import json
+from m4m_utils import cur_date
+from termcolor import colored
 
 command_table = [
     obd.commands.PIDS_A,
@@ -98,34 +100,21 @@ command_table = [
     obd.commands.FUEL_RATE,
 ]
 
-connection = obd.OBD(portstr="/dev/ttyUSB0")
-data = {}
+def obd_start():
+    print(cur_date(), "Connecting OBD...")
+    obd_con = obd.OBD()
+    if obd_con.is_connected():
+        print(cur_date(), "OBD connected\n")
+    else:
+        print(cur_date(), colored("OBD not connected\n", 'red'))
 
-import datetime, os
+    return obd_con 
 
-while True:
+
+def obd_read(con):
+    data = {}
     for cmd in command_table:
-        response = connection.query(cmd)
-        data[cmd.name.lower()] = str(response.value)
+        response = con.query(cmd)
+        data[cmd.name.lower()] = response.value
 
-    if data:
-       timestamp = str(datetime.datetime.now())
-       data_json = json.dumps({"timestamp": timestamp, "value": data})
-       # еее гавнокод
-       with open("obd.log", "a") as log:
-          log.write(data_json)
-          log.write("\n")
-       if not os.path.exists("obd.csv"):
-          with open("obd.csv", "w") as csv:
-              csv.write("timestamp;")
-              for key in data:
-                  csv.write(key)
-                  csv.write(";")
-              csv.write("\n")
-       with open("obd.csv", "a") as csv:
-          csv.write("{};".format(timestamp))
-          for key in data:
-              csv.write(str(data[key]))
-              csv.write(";")
-          csv.write("\n")
-
+    return data
